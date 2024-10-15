@@ -46,66 +46,38 @@ __start:
     add a0, x0, t0
     addi t0, x0, 0
     
+    la x1, exit
+    
 ################################################################################ 
   # You can do your main function here
 
   # a0 > a1
   # s5 = 0 if no swap, = 1 if swap
   # addi s5, x0, 0
-  # add s6, x0, a1
-  # addi s7, x0, 1
-  # ble a0, a1, next 
-  # addi x28, a0, 0
-  # addi a0, a1, 0
-  # addi a1, x28, 0
-  # addi s5, x0, 1
+  add s6, x0, a1
+  addi s5, x0, 0
+  bge a0, a1, loop 
+  addi x28, a0, 0
+  addi a0, a1, 0
+  addi a1, x28, 0
+  addi s5, x0, 1
 
 
 # store a, b in s0, s1
 loop:
-  # xori s5, s5, 1
-  # s4 = a / b
-  # handle a, b
-#   addi sp, sp, -16
-#   sw x1, 8(sp)
-#   bne a1, x0, next
-#   addi s2, x0, 1
-#   addi s1, x0, 0
-#   lw x1, 8(sp)
-#   addi sp, sp, 16
-#   jalr x0, 0(x1)
-#   beq x0, x0, exit
-#
-# next:
-#   div s4, a0, a1
-#   sw s4, 0(sp)
-#   mul x28, a1, s4
-#   sub x28, a0, x28
-#   addi a0, a1, 0
-#   addi a1, x28, 0
-#   beq x0, x0, cont
-  #########################################3
-  # beq a1, x0, exit
+  beq a1, x0, basecase
   div s4, a0, a1
   addi sp, sp, -8
-  sw x1, 4(sp)
-  sw s4, 0(sp)
+  sw x1, 0(sp)
+  sw s4, 4(sp)
   mul x28, a1, s4
   sub x28, a0, x28
   addi a0, a1, 0
   addi a1, x28, 0
 
-  bne a1, x0, cont
-  addi s2, x0, 1
-  addi s1, x0, 0
-  lw x1, 4(sp)
-  addi sp, sp, 8
-  jalr x0, 0(x1)
-
-cont:
   jal x1, loop
-  lw s4, 0(sp)
-  lw x1, 4(sp)
+  lw x1, 0(sp)
+  lw s4, 4(sp)
   mul x28, s2, s4
   sub x28, s1, x28
   addi s1, s2, 0
@@ -113,16 +85,24 @@ cont:
   addi sp, sp, 8
   jalr x0, 0(x1)
 
-  
-  
-
+basecase:
+  addi s2, x0, 0
+  addi s1, x0, 1
+  jalr x0, 0(x1)
 
 exit:
-  # addi s1, s0, 0
   addi s0, a0, 0
-  # addi s3, x0, 0
-  # bne s0, s7, result
-  # addi s3, s1, 0
+  addi s3, s1, 0
+  beq s5, x0, inv
+  addi x28, s1, 0
+  addi s1, s2, 0
+  addi s2, x28, 0
+  addi s3, s1, 0
+
+inv:
+  bge s3, x0, result
+  add s3, s3, s6
+  beq x0, x0, inv
 
 
 
