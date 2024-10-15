@@ -14,7 +14,7 @@
 .text
 ################################################################################
   # You may write function here
-
+  #  x in a0, y in a1
     
     
 ################################################################################
@@ -49,8 +49,60 @@ __start:
 ################################################################################ 
   # You can do your main function here
 
-    
-################################################################################
+  # a0 > a1
+  # s5 = 0 if no swap, = 1 if swap
+  addi s5, x0, 0
+  add s6, x0, a1
+  addi s7, x0, 1
+  ble a0, a1, next 
+  addi x28, a0, 0
+  addi a0, a1, 0
+  addi a1, x28, 0
+  addi s5, x0, 1
+
+next:
+  addi s0, x0, 1
+  addi s1, x0, 0
+  addi s2, x0, 0
+  addi s3, s0, 1
+
+loop:
+  beq a1, x0, exit
+  # xori s5, s5, 1
+  # s4 = a / b
+  # handle a, b
+  div s4, a0, a1
+  mul x28, a1, s4
+  sub x28, a0, x28
+  addi a0, a1, 0
+  addi a1, x28, 0
+  # handle s
+  mul x28, s1, s4
+  sub x28, s0, x28
+  addi s0, s1, 0
+  addi s1, x28, 0
+  # handle t
+  mul x28, s3, s4
+  sub x28, s2, x28
+  addi s2, s3, 0
+  addi s3, x28, 0
+  beq x0, x0, loop
+
+  
+
+
+exit:
+  addi s1, s0, 0
+  addi s0, a0, 0
+  addi s3, x0, 0
+  bne s0, s7, result
+  addi s3, s1, 0
+
+loop2:
+  bge s3 x0, result
+  add s3, s3, s6
+  beq x0, x0, loop2
+
 
 result:
     addi t0,a0,0
