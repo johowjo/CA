@@ -54,13 +54,13 @@ __start:
   # a0 > a1
   # s5 = 0 if no swap, = 1 if swap
   # addi s5, x0, 0
-  # add s6, x0, a1
-  # addi s7, x0, 1
-  # ble a0, a1, next 
-  # addi x28, a0, 0
-  # addi a0, a1, 0
-  # addi a1, x28, 0
-  # addi s5, x0, 1
+  add s6, x0, a1
+  addi s5, x0, 0
+  bgt a0, a1, loop 
+  addi x28, a0, 0
+  addi a0, a1, 0
+  addi a1, x28, 0
+  addi s5, x0, 1
 
 
 # store a, b in s0, s1
@@ -96,6 +96,17 @@ basecase:
 
 exit:
   addi s0, a0, 0
+  addi s3, s1, 0
+  beq s5, x0, inv
+  addi x28, s1, 0
+  addi s1, s2, 0
+  addi s1, x28, 0
+  addi s3, s2, 0
+
+inv:
+  bge s3, x0, result
+  add s3, s3, s6
+  beq x0, x0, inv
 
 
 
