@@ -53,7 +53,7 @@ Terminate:
 ################################################################################
 
 .rodata
-    pattern: .string "./pattern2.txt"
+    pattern: .string "./pattern1.txt"
     # pattern: .string "../../{student id}_hw1/p3/pattern0.txt"
     # pattern: .string "../../{student id}_hw1/p3/pattern1.txt"
     # pattern: .string "../../{student id}_hw1/p3/pattern2.txt"
@@ -68,27 +68,15 @@ Terminate:
 your_function:
   li a3, 0x10300 # new array at a3
   addi s0, x0, 0x5e # s0 = 94
-  addi s1, x0, 0
-loop_1:
-  beq s1, s0, Exit
-  add a2, a2, s1
-  lb t0, 0(a2)
-  sub a2, a2, s1
-  addi t1, x0, 0x00
-  beq t0, t1, Exit
   addi t0, x0, 0
   jal x1, init # initialize a3[]
   addi t0, x0, 0
-  addi t1, s1, 0
+  addi t1, x0, 0
   jal x1, loop
   bne t0, x0, Exit
   addi s1, s1, 1
-  beq x0, x0, loop_1
   jal x0, Exit
 
-# loop:
-#   bne t1, s0, cont
-#   jalr x0, 0(x1)
 loop:
   add a2, a2, t1
   lb t2, 0(a2)
@@ -109,6 +97,7 @@ cont:
 
 finish:
   addi t0, t0, 1
+  add t1, x0, t2
   jalr x0, 0(x1)
 
 
@@ -121,4 +110,6 @@ init:
   beq x0, x0, init
 
 exit:
+  addi t0, x0, 1
+  sb t0, 0(a3)
   jalr x0, 0(x1)
