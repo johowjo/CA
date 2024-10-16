@@ -58,32 +58,18 @@ __start:
 
 # count the length of the input string
 count_length:
-  mul t1, s4, s8
-  add a0, a0, t1
+  add a0, a0, s4 
   lb t2, 0(a0) # t2 is the character at index s4
-  sub a0, a0, t1
+  sub a0, a0, s4
   beq t2, s0, exit_1 
-  # beq t2, t2, exit_1
   addi s4, s4, 1
   beq x0, x0, count_length
 
-# print:
-#   li a0, 4
-#   mv a0, t2
-#   ecall
-#   jalr x0, 0(x1)
-
-##############
 
 # call exit_1 after counting length
 exit_1:
   jal x1, clear
   addi t0, x0, 0
-##### testing ######
-  # mul t1, s4, s8
-  # sub t1, t1, s8
-  # add t4, a0, t1
-  # beq x0, x0, result
 
 
 loop_1:
@@ -118,23 +104,6 @@ loop_2:
   sub a2, a2, t2
   addi t1, t1, 1
   beq x0, x0, loop_2
-  ####################
-  # addi t2, t1, 0
-  # add a0, a0, t2
-  # lb t3, 0(a0) # store s[t1] at t3
-  # sub a0, a0, t2
-  # mul t2, t3, s8
-  # add a2, a2, t2
-  # lb t3, 0(a2)
-  # sub a2, a2, t2
-  # addi t4, x0, 1
-  # beq t3, t4, exit_2
-  # add a2, a2, t2
-  # sw t4, 0(a2)
-  # sub a2, a2, t2
-  # addi t1, t1, 1
-  # beq x0, x0, loop_2
-  
 
 exit_2:
   jalr x0, 0(x1)
@@ -146,29 +115,16 @@ clear_dic:
   bne t2, s1, proceed
   jalr x0, 0(x1)
 proceed:
-  mul t4, t2, s8 
-  add a2, a2, t4
+  add a2, a2, t2
   sb x0, 0(a2)
-  sub a2, a2, t4
+  sub a2, a2, t2
   addi t2, t2, 1
   beq x0, x0, clear_dic
 
 
 finish:
-  mul t2, s2, s8
   add a0, a0, s3
   sb s0, 0(a0)
   sub a0, a0, s3
-  add t4, a0, t2
+  add t4, a0, s2
   beq x0, x0, result
-
-
-
-
-
-
-
-
-
-
-
