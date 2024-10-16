@@ -53,8 +53,7 @@ Terminate:
 ################################################################################
 
 .rodata
-    pattern: .string "./pattern2.txt"
-    # pattern: .string "../../{student id}_hw1/p3/pattern0.txt"
+    pattern: .string "../../{student id}_hw1/p3/pattern0.txt"
     # pattern: .string "../../{student id}_hw1/p3/pattern1.txt"
     # pattern: .string "../../{student id}_hw1/p3/pattern2.txt"
 .text
