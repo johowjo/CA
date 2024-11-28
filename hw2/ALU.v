@@ -118,10 +118,10 @@ module ALU (
 // ===============================================
 
 reg [63:0] out_data;
-reg [31:0] tmp_0;
-reg [31:0] tmp_1;
-reg [31:0] A;
-reg [31:0] B;
+//reg [31:0] tmp_0;
+//reg [31:0] tmp_1;
+//reg [31:0] A;
+//reg [31:0] B;
 reg ready;
 reg [63:0] out;
 reg loaded;
@@ -164,52 +164,52 @@ always @(*) begin
     mode_in = mode;
   end
   */
-  A = in_A;
-  B = in_B;
+  //A = in_A;
+  //B = in_B;
   case(mode) 
     4'd0: begin
-      tmp_0 = $signed(A) + $signed(B);
-      if (A[31] && B[31]) begin
-        if (!tmp_0[31]) begin
+      out = {32'd0, $signed(in_A) + $signed(in_B)};
+      if (in_A[31] && in_B[31]) begin
+        if (!out[31]) begin
           out = {32'd0, 32'h80000000};
         end else begin
-          out = tmp_0;
+          //out = tmp_0;
         end
-      end else if (!A[31] && !B[31]) begin
-        if(tmp_0[31]) begin
+      end else if (!in_A[31] && !in_B[31]) begin
+        if(out[31]) begin
           out = {32'd0, 32'h7fffffff};
         end else begin
-          out = tmp_0;
+          //out = tmp_0;
         end
       end else begin
-        out = tmp_0;
+        //out = tmp_0;
       end
     end
     4'd1: begin
-      tmp_1 = $signed(A) - $signed(B);
-      if (A[31] && !B[31]) begin
-        if (!tmp_1[31]) begin
+      out = {32'd0, $signed(in_A) - $signed(in_B)};
+      if (in_A[31] && !in_B[31]) begin
+        if (!out[31]) begin
           out = {32'd0, 32'h80000000};
         end else begin
-          out = tmp_1;
+          //out = tmp_1;
         end
-      end else if (!A[31] && B[31]) begin
-        if(tmp_1[31]) begin
+      end else if (!in_A[31] && in_B[31]) begin
+        if(out[31]) begin
           out = {32'd0, 32'h7fffffff};
         end else begin
-          out = tmp_1;
+          //out = tmp_1;
         end
       end else begin
-        out = tmp_1;
+        //out = tmp_1;
       end
     end
     4'd2: out = {32'd0, (in_A & in_B)};
-    4'd3: out = {32'd0, (A | B)};
-    4'd4: out = {32'd0, (A ^ B)};
-    4'd5: out = {63'd0, (A == B)};
-    4'd6: out = {63'd0, ($signed(A) >= $signed(B))};
-    4'd7: out = {32'd0, (A >> B)};
-    4'd8: out = {32'd0, (A << B)};
+    4'd3: out = {32'd0, (in_A | in_B)};
+    4'd4: out = {32'd0, (in_A ^ in_B)};
+    4'd5: out = {63'd0, (in_A == in_B)};
+    4'd6: out = {63'd0, ($signed(in_A) >= $signed(in_B))};
+    4'd7: out = {32'd0, (in_A >> in_B)};
+    4'd8: out = {32'd0, (in_A << in_B)};
     default: out = 64'd0;
   endcase
   /*
