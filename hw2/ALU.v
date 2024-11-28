@@ -9,21 +9,19 @@ module DIV (
 );
 
 reg [63:0] tmp;
-reg [31:0] quo = 32'd0;
 reg [63:0] rem = 64'd0;
 reg [5:0] count;
-reg [63:0] div = 64'd0;
-//reg [31:0] div = 32'd0;
+reg [31:0] div = 32'd0;
+reg over;
 reg ready;
 
-assign out_data = tmp;
-//assign out_data = rem;
+assign out_data = {over, tmp[63:33], tmp[31:0]};
 
 always @(*) begin
-  if (rem >= div) begin
-    tmp = ((rem - div) << 32) + (quo << 1) + 64'd1;
+  if (rem >= {div, 32'd0}) begin
+    tmp <= ((rem - {div, 32'd0}) << 1) + 64'd1;
   end else begin
-    tmp = (rem << 32) + (quo << 1);
+    tmp <= rem << 1;
   end
 end
 
@@ -33,26 +31,19 @@ always @(posedge clk or negedge rst_n) begin
     ready <= 0;
     rem <= 64'd0;
     div <= 32'd0;
-    quo <= 32'd0;
   end else if (!on) begin
     count <= 6'd0;
     ready <= 0;
-    //rem <= {(A), (A)};
-    rem <= A;
-    div <= {(B), 32'd0} >> 1;
-    //div <= B;
-    quo <= 32'd0;
+    rem <= {31'd0, (A), 1'd0};
+    div <= B;
+    over <= (A < B) && A[31];
   end else if (count <= 6'd31) begin
-    if (rem >= div) begin
-      quo <= (quo << 1) + 32'd1;
-      rem <= rem - div;
-      //rem <= rem - {(div), 32'd0};
+    if (rem >= {div, 32'd0}) begin
+      rem <= ((rem - {div, 32'd0}) << 1) + 64'd1;
     end else begin
-      quo <= quo << 1;
+      rem <= rem << 1;
     end
     count <= count + 6'd1;
-    //rem <= rem << 1;
-    div <= div >> 1;
     if (count == 6'd30) begin
       ready <= 1;
     end
@@ -146,8 +137,8 @@ wire div_ready;
 MUL mul (
   .clk (clk),
   .rst_n (rst_n),
-  .A (A),
-  .B (B),
+  .A (in_A),
+  .B (in_B),
   .out_data (mul_out),
   .ready (mul_ready),
   .on (mul_on)
@@ -156,8 +147,8 @@ MUL mul (
 DIV div (
   .clk (clk),
   .rst_n (rst_n),
-  .A (A),
-  .B (B),
+  .A (in_A),
+  .B (in_B),
   .out_data (div_out),
   .ready (div_ready),
   .on (div_on)
@@ -212,7 +203,7 @@ always @(*) begin
         out = tmp_1;
       end
     end
-    4'd2: out = {32'd0, (A & B)};
+    4'd2: out = {32'd0, (in_A & in_B)};
     4'd3: out = {32'd0, (A | B)};
     4'd4: out = {32'd0, (A ^ B)};
     4'd5: out = {63'd0, (A == B)};
