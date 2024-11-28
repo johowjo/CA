@@ -9,63 +9,49 @@ module DIV (
 );
 
 reg [63:0] tmp;
-reg [63:0] tmp_rem;
-reg [63:0] tmp_quo;
-reg [63:0] quo = 64'd0;
+reg [31:0] quo = 32'd0;
 reg [63:0] rem = 64'd0;
 reg [5:0] count;
 reg [63:0] div = 64'd0;
+//reg [31:0] div = 32'd0;
 reg ready;
 
 assign out_data = tmp;
+//assign out_data = rem;
 
 always @(*) begin
-  //$display("%b", quo);
-  //$display("%b", tmp_quo);
   if (rem >= div) begin
-    //$display("%h", rem);
-    //$display("%h", div);
-    tmp_rem = rem - div;
-    tmp_quo = (quo << 1) + 64'd1;
+    tmp = ((rem - div) << 32) + (quo << 1) + 64'd1;
   end else begin
-    tmp_rem = rem;
-    tmp_quo = quo << 1;
+    tmp = (rem << 32) + (quo << 1);
   end
-  //$display("%h", tmp_rem);
-  //$display("%h", tmp_quo);
-  tmp = (tmp_rem << 32) + tmp_quo;
-  //$display("%h", tmp);
 end
 
 always @(posedge clk or negedge rst_n) begin
   if (!rst_n) begin
     count <= 6'd0;
-    //tmp_quo <= 64'd0;
-    //tmp_rem <= 64'd0;
     ready <= 0;
     rem <= 64'd0;
-    div <= 64'd0;
-    quo <= 64'd0;
+    div <= 32'd0;
+    quo <= 32'd0;
   end else if (!on) begin
     count <= 6'd0;
-    //tmp_quo <= 64'd0;
-    //tmp_rem <= 64'd0;
     ready <= 0;
-    rem <= {32'd0, (A)};
+    //rem <= {(A), (A)};
+    rem <= A;
     div <= {(B), 32'd0} >> 1;
-    quo <= 64'd0;
+    //div <= B;
+    quo <= 32'd0;
   end else if (count <= 6'd31) begin
-    /*
-    $display(count);
-    $display("%h", tmp_quo);
-    $display("%h", quo);
-    */
-    //$display("%h", rem);
-    //$display("%h", quo);
-    //$display("%h", div);
+    if (rem >= div) begin
+      quo <= (quo << 1) + 32'd1;
+      rem <= rem - div;
+      //rem <= rem - {(div), 32'd0};
+    end else begin
+      quo <= quo << 1;
+    end
     count <= count + 6'd1;
-    quo <= tmp_quo;
-    rem <= tmp_rem;
+    //rem <= rem << 1;
     div <= div >> 1;
     if (count == 6'd30) begin
       ready <= 1;
@@ -87,36 +73,37 @@ module MUL (
 reg [63:0] out;
 reg [63:0] tmp;
 reg [5:0] count;
-reg [31:0] tmp_A = 64'd0;
-reg [63:0] tmp_B = 64'd0;
+//reg [31:0] tmp_A = 32'd0;
+reg [31:0] tmp_B = 32'd0;
 reg ready;
 
 assign out_data = tmp;
 
 always @(*) begin
-  if (tmp_A[count]) begin 
-    tmp = out + tmp_B;
+  if (out[0]) begin 
+    tmp = (out >> 1) + ({(tmp_B), 32'd0} >> 1);
   end else begin
-    tmp = out;
+    tmp = out >> 1;
   end
+  //$display("%h", tmp);
 end
 
 always @(posedge clk or negedge rst_n) begin
   if (!rst_n) begin
     count <= 6'd0;
-    out <= 64'd0;
+    out <= {32'd0, (A)};
     ready <= 0;
-    tmp_B <= {32'd0, (B)};
+    tmp_B <= B;
   end else if (!on) begin
     count <= 6'd0;
-    out <= 64'd0;
+    out <= {32'd0, (A)};
     ready <= 0;
-    tmp_B <= {32'd0, (B)};
-    tmp_A <= A;
+    tmp_B <= B;
+    //tmp_B <= {{0, (B)}, (A)}
+    //tmp_A <= A;
   end else if (count <= 6'd31) begin
     out <= tmp;
     count <= count + 6'd1;
-    tmp_B <= tmp_B << 1;
     if (count == 6'd30) begin
       ready <= 1;
     end
@@ -142,12 +129,12 @@ module ALU (
 reg [63:0] out_data;
 reg [31:0] tmp_0;
 reg [31:0] tmp_1;
-reg ready;
 reg [31:0] A;
 reg [31:0] B;
+reg ready;
 reg [63:0] out;
 reg loaded;
-reg [3:0] mode_in;
+//reg [3:0] mode_in;
 reg mul_on = 0;
 reg [5:0] count = 0;
 wire [63:0] mul_out;
@@ -188,7 +175,6 @@ always @(*) begin
   */
   A = in_A;
   B = in_B;
-  mode_in = mode;
   case(mode) 
     4'd0: begin
       tmp_0 = $signed(A) + $signed(B);
@@ -271,14 +257,14 @@ always @(posedge clk or negedge rst_n) begin
     loaded <= 1;
     //$display(mode);
     //$display(mode_in);
-    if (mode_in <= 4'd8) begin
+    if (mode <= 4'd8) begin
       //$display("here");
       out_data <= out;
       ready <= 1;
-    end else if (mode_in == 4'd9) begin
-      //count <= 6'd1;
+    end else if (mode == 4'd9) begin
+      //count <= 6'd1_in;
       mul_on <= 1;
-    end else if (mode_in == 4'd10) begin
+    end else if (mode == 4'd10) begin
       div_on <= 1;
     end
   end else if (mul_on) begin
