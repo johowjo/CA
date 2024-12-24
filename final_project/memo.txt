@@ -1,6 +1,0 @@
-add : 0
-sub : 1
-slli : 2
-srli : 3
-srai : 4
-slti : 5

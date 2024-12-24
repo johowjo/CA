@@ -11,21 +11,25 @@ module FSM(clk, rst_n, next, out);
   localparam WB = 5'd5;
   localparam PC = 5'd6;
 
-  reg [4:0] state, state_next;
+  reg [4:0] state;
+  wire [4:0] state_next;
   assign out = state;
 
-  always @(*) begin
-    case(state)
-      ID: state_next = next ? MULDIV_WAIT : ID;
-      MULDIV_WAIT: state_next = next ? IF : MULDIV_WAIT;
-      IF: state_next = next ? EX : IF;
-      EX: state_next = next ? MEM : EX;
-      MEM: state_next = next ? MEM_WAIT : MEM;
-      MEM_WAIT: state_next = next ? WB : MEM_WAIT;
-      WB: state_next = next ? PC : WB;
-      PC: state_next = next ? ID : PC;
-    endcase
-  end
+  assign state_next = (state == ID && next) ? MULDIV_WAIT :
+                      (state == ID && !next) ? ID :
+                      (state == MULDIV_WAIT && next) ? IF :
+                      (state == MULDIV_WAIT && !next) ? MULDIV_WAIT :
+                      (state == IF && next) ? EX :
+                      (state == IF && !next) ? IF :
+                      (state == EX && next) ? MEM :
+                      (state == EX && !next) ? EX :
+                      (state == MEM && next) ? MEM_WAIT :
+                      (state == MEM && !next) ? MEM :
+                      (state == MEM_WAIT && next) ? WB :
+                      (state == MEM_WAIT && !next) ? MEM_WAIT :
+                      (state == WB && next) ? PC :
+                      (state == WB && !next) ? WB :
+                      (state == PC && next) ? ID : PC;
 
   always @(posedge clk or negedge rst_n) begin
     //$display(out);
@@ -65,7 +69,7 @@ module CPU(clk,
     // Do not modify this part!!!            //
     // Exception: You may change wire to reg //
     reg    [31:0] PC          ;              //
-    reg    [31:0] PC_nxt      ;              //
+    wire    [31:0] PC_nxt      ;             //
     wire          regWrite    ;              //
     wire   [ 4:0] rs1, rs2, rd;              //
     wire   [31:0] rs1_data    ;              //
@@ -96,7 +100,8 @@ module CPU(clk,
     localparam add = 5'd19;
 
     // Todo: other wire/reg
-    reg [4:0] mode;
+    //reg [4:0] mode;
+    wire [4:0] mode;
     reg [31:0] instruction;
     wire [6:0] opcode;
     //reg [6:0] opcode;
@@ -105,9 +110,9 @@ module CPU(clk,
     reg [31:0] alu_lhs;
     reg [31:0] alu_rhs;
     reg [31:0] alu_result;
-    reg [31:0] alu_result_next;
+    wire [31:0] alu_result_next;
     reg [31:0] wb_data;
-    reg [31:0] wb_data_next;
+    wire [31:0] wb_data_next;
     wire [4:0] state;
     reg wen_d;
     reg next;
@@ -118,11 +123,11 @@ module CPU(clk,
     wire valid;
     reg muldiv_valid;
     wire muldiv_mode;
-    reg muldiv_mode_reg;
+    //reg muldiv_mode_reg;
     wire [63:0] muldiv_out;
     //wire ready;
     wire muldiv_ready;
-    reg muldiv_result;
+    //reg muldiv_result;
 
     FSM fsm(
       .clk(clk),
@@ -148,12 +153,12 @@ module CPU(clk,
     mulDiv muldiv(                           //
         .clk(clk),                           //
         .rst_n(rst_n),                       //
-        .valid(valid), 
-        .in_A(muldiv_in_A),
-        .in_B(muldiv_in_B),
-        .mode(muldiv_mode), 
-        .ready(muldiv_ready),
-        .out_data(muldiv_out));
+        .valid(valid),                       //
+        .in_A(muldiv_in_A),                  //
+        .in_B(muldiv_in_B),                  //
+        .mode(muldiv_mode),                  //
+        .ready(muldiv_ready),                //
+        .out_data(muldiv_out));              //
     //---------------------------------------//
 
     // Todo: any combinational/sequential circuit
@@ -162,7 +167,7 @@ module CPU(clk,
     assign muldiv_in_A = rs1_data;
     assign muldiv_in_B = rs2_data;
     assign valid = muldiv_valid;
-    assign muldiv_mode = muldiv_mode_reg;
+    //assign muldiv_mode = muldiv_mode_reg;
 
     // architecture
     assign addr_I = PC;
@@ -178,176 +183,60 @@ module CPU(clk,
     assign rd_data = wb_data;
     assign regWrite = regwrite;
 
-    always @(*) begin
-      muldiv_result = muldiv_out;
-      //opcode = instruction[14:12];
-      // parsing mode
-      case(opcode) 
-        7'd3: mode = lw;
-        7'd19: begin
-          case(func3) 
-            3'd0: mode = addi;
-            3'd1: mode = slli;
-            3'd2: mode = slti;
-            3'd5: begin
-              case(func7) 
-                7'd0: mode = srli;
-                7'd32: mode = srai;
-              endcase
-            end
-          endcase
-        end
-        7'd23: mode = auipc;
-        7'd35: mode = sw;
-        7'd51: begin
-          case(func3)
-            3'd0: begin
-              case(func7)
-                7'd0: mode = add;
-                7'd1: mode = mul;
-                7'd32: mode = sub;
-              endcase
-            end
-            3'd5: mode = div;
-            3'd7: mode = remu;
-          endcase
-        end
-        7'd55: mode = lui;
-        7'd99: begin
-          case(func3)
-            3'd0: mode = beq;
-            3'd1: mode = bne;
-            3'd4: mode = blt;
-            3'd5: mode = bge;
-          endcase
-        end
-        7'd103: mode = jalr;
-        7'd111: mode = jal;
-      endcase
-      // alu
-      case(mode)
-        lw: begin
-          alu_result_next = rs1_data + {{21{instruction[31]}}, instruction[30:20]};
-          PC_nxt = PC + 4;
-          wb_data_next = rdata_D;
-        end
-        sw: begin
-          alu_result_next = rs1_data + {{21{instruction[31]}}, instruction[30:25], instruction[11:7]};
-          PC_nxt = PC + 4;
-        end
-        add: begin
-          alu_result_next = rs1_data + rs2_data;
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        sub: begin
-          alu_result_next = $signed(rs1_data) - $signed(rs2_data);
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        addi: begin
-          alu_result_next = rs1_data + {{21{instruction[31]}}, instruction[30:20]};
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        slli: begin
-          alu_result_next = rs1_data << instruction[24:20];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        srli: begin
-          alu_result_next = rs1_data >> instruction[24:20];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        srai: begin
-          alu_result_next = $signed(rs1_data) >>> instruction[24:20];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        slti: begin
-          alu_result_next = ($signed(rs1_data) < $signed(instruction[31:20])) ? 32'b1 : 32'b0;
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        beq: begin
-          alu_result_next = (rs1_data == rs2_data) ? 32'b1: 32'b0;
-          if(rs1_data == rs2_data) begin
-            PC_nxt = PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
-          end else begin
-            PC_nxt = PC + 4;
-          end
-        end
-        bge: begin
-          alu_result_next = ($signed(rs1_data) >= $signed(rs2_data)) ? 32'b1: 32'b0;
-          if($signed(rs1_data) >= $signed(rs2_data)) begin
-            PC_nxt = PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
-          end else begin
-            PC_nxt = PC + 4;
-          end
-        end
-        blt: begin
-          alu_result_next = (rs1_data < rs2_data) ? 32'b1: 32'b0;
-          if($signed(rs1_data) < $signed(rs2_data)) begin
-            PC_nxt = PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
-          end else begin
-            PC_nxt = PC + 4;
-          end
-        end
-        bne: begin
-          alu_result_next = (rs1_data != rs2_data) ? 32'b1: 32'b0;
-          if(rs1_data != rs2_data) begin
-            PC_nxt = PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0};
-          end else begin
-            PC_nxt = PC + 4;
-          end
-        end
-        jalr: begin
-          alu_result_next = PC + 4;
-          PC_nxt = rs1_data + {{21{instruction[31]}}, instruction[30:20]};
-          //PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        jal: begin
-          alu_result_next = PC + 4;
-          //PC_nxt = PC + $signed({instruction[31], instruction[19:12], instruction[20], instruction[30:21], 1'b0});
-          PC_nxt = PC + {{12{instruction[31]}}, instruction[19:12], instruction[20], instruction[30:21], 1'b0};
-          wb_data_next = alu_result;
-        end
-        auipc: begin
-          alu_result_next = PC + {instruction[31:12], 12'b0};
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        lui: begin
-          alu_result_next = {instruction[31:12], 12'b0};
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-        end
-        mul: begin
-          //alu_result_next = (rs1_data * rs2_data) & 32'hffffffff;
-          //alu_result_next = $signed(rs1_data) * $signed(rs2_data);
-          //alu_result_next = muldiv_result[31:0];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-          muldiv_mode_reg = 1;
-        end
-        div: begin
-          //alu_result_next = rs1_data / rs2_data;
-          //alu_result_next = muldiv_result[31:0];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-          muldiv_mode_reg = 0;
-        end
-        remu: begin
-          //alu_result_next = rs1_data % rs2_data;
-          //alu_result_next = muldiv_result[63:32];
-          PC_nxt = PC + 4;
-          wb_data_next = alu_result;
-          muldiv_mode_reg = 0;
-        end
-      endcase
-    end
+    // mode
+    assign mode = (opcode == 7'd3) ? lw :
+                  (opcode == 7'd19 && func3 == 3'd0) ? addi : 
+                  (opcode == 7'd19 && func3 == 3'd1) ? slli : 
+                  (opcode == 7'd19 && func3 == 3'd2) ? slti : 
+                  (opcode == 7'd19 && func3 == 3'd5 && func7 == 7'd0) ? srli :
+                  (opcode == 7'd19 && func3 == 3'd5 && func7 == 7'd32) ? srai :
+                  (opcode == 7'd23) ? auipc : 
+                  (opcode == 7'd35) ? sw : 
+                  (opcode == 7'd51 && func3 == 7'd0 && func7 == 7'd0) ? add :
+                  (opcode == 7'd51 && func3 == 7'd0 && func7 == 7'd1) ? mul :
+                  (opcode == 7'd51 && func3 == 7'd0 && func7 == 7'd32) ? sub :
+                  (opcode == 7'd51 && func3 == 3'd5) ? div :
+                  (opcode == 7'd51 && func3 == 3'd7) ? remu :
+                  (opcode == 7'd55) ? lui : 
+                  (opcode == 7'd99 && func3 == 3'd0) ? beq :
+                  (opcode == 7'd99 && func3 == 3'd1) ? bne :
+                  (opcode == 7'd99 && func3 == 3'd4) ? blt :
+                  (opcode == 7'd99 && func3 == 3'd5) ? bge :
+                  (opcode == 7'd103) ? jalr :
+                  (opcode == 7'd111) ? jal : lw;
+
+    // next alu result
+    assign alu_result_next = (mode == lw) ? rs1_data + {{21{instruction[31]}}, instruction[30:20]} : 
+                             (mode == sw) ? rs1_data + {{21{instruction[31]}}, instruction[30:25], instruction[11:7]} :
+                             (mode == add) ? rs1_data + rs2_data : 
+                             (mode == sub) ? $signed(rs1_data) - $signed(rs2_data) :
+                             (mode == addi) ? rs1_data + {{21{instruction[31]}}, instruction[30:20]} :
+                             (mode == slli) ? rs1_data << instruction[24:20] :
+                             (mode == srli) ? rs1_data >> instruction[24:20] :
+                             (mode == srai) ? $signed(rs1_data) >>> instruction[24:20] :
+                             (mode == slti) ? ($signed(rs1_data) < $signed(instruction[31:20])) ? 32'b1 : 32'b0 :
+                             (mode == beq) ? ((rs1_data == rs2_data) ? 32'b1: 32'b0) :
+                             (mode == bge) ? (($signed(rs1_data) >= $signed(rs2_data)) ? 32'b1: 32'b0) :
+                             (mode == blt) ? (($signed(rs1_data) < $signed(rs2_data)) ? 32'b1 : 32'b0) :
+                             (mode == bne) ? ((rs1_data != rs2_data) ? 32'b1 : 32'b0) :
+                             (mode == jalr) ? PC + 4 : 
+                             (mode == jal) ? PC + 4 :
+                             (mode == auipc) ? PC + {instruction[31:12], 12'b0} :
+                             (mode == lui) ? {instruction[31:12], 12'b0} : 32'd0;
+
+    // next PC
+    assign PC_nxt = (mode == beq && rs1_data == rs2_data) ? PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0} :
+                    (mode == bge && $signed(rs1_data) >= $signed(rs2_data)) ? PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0} :
+                    (mode == blt && $signed(rs1_data) < $signed(rs2_data)) ? PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0} :
+                    (mode == bne && $signed(rs1_data) != $signed(rs2_data)) ? PC + {{20{instruction[31]}}, instruction[7], instruction[30:25], instruction[11:8], 1'b0} :
+                    (mode == jalr) ? rs1_data + {{21{instruction[31]}}, instruction[30:20]} :
+                    (mode == jal) ? PC + {{12{instruction[31]}}, instruction[19:12], instruction[20], instruction[30:21], 1'b0} : PC + 4;
+
+    // write back data
+    assign wb_data_next = (mode == lw) ? rdata_D : alu_result;
+
+    // mul/div mode
+    assign muldiv_mode = (mode == mul) ? 1 : 0;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -379,9 +268,11 @@ module CPU(clk,
                 if(mode == mul || mode == div || mode == remu) begin
                  if(muldiv_ready) begin
                    if(mode == mul || mode == div) begin
-                     alu_result_next <= muldiv_out[31:0];
+                     //alu_result_next <= muldiv_out[31:0];
+                     alu_result <= muldiv_out[31:0];
                    end else begin
-                     alu_result_next <= muldiv_out[63:32];
+                     //alu_result_next <= muldiv_out[63:32];
+                     alu_result <= muldiv_out[63:32];
                    end
                    //alu_result <= alu_result_next;
                  end
@@ -400,7 +291,9 @@ module CPU(clk,
               end
               5'd2: begin
                 next <= 1;
-                alu_result <= alu_result_next;
+                if(mode != mul && mode != div && mode != remu) begin
+                  alu_result <= alu_result_next;
+                end
                 /*
                 if(mode != mul && mode != div && mode != remu) begin
                   alu_result <= alu_result_next;
